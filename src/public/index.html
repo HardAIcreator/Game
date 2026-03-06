@@ -2,1603 +2,746 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IMBOVIY ZOMBIE SURVIVAL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>♟️ ИМБОВЫЕ ШАХМАТЫ</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            background: #000; 
-            font-family: 'Arial', sans-serif; 
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        #main-menu {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+        
+        #game-area {
+            background: #2d2d44;
+            border-radius: 30px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        
+        #chessboard {
+            width: 100%;
+            aspect-ratio: 1;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 2px;
+            background: #1a1a2e;
+            padding: 10px;
+            border-radius: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: min(5vw, 45px);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .square.light {
+            background: var(--light-color);
+        }
+        
+        .square.dark {
+            background: var(--dark-color);
+        }
+        
+        .square.selected {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px gold;
+            z-index: 10;
+        }
+        
+        .square.possible-move {
+            position: relative;
+        }
+        
+        .square.possible-move::after {
+            content: '';
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            background: rgba(0,255,0,0.5);
+            border-radius: 50%;
+        }
+        
+        .square:active {
+            transform: scale(0.95);
+        }
+        
+        #sidebar {
+            background: #2d2d44;
+            border-radius: 30px;
+            padding: 20px;
+            color: white;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .player-card {
+            background: #1a1a2e;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid #4a4a6a;
+        }
+        
+        .player-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .player-rating {
+            font-size: 18px;
+            color: #7fffd4;
+            margin: 5px 0;
+        }
+        
+        .player-color {
+            font-size: 16px;
+            padding: 5px 10px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .white-color { background: #f0f0f0; color: black; }
+        .black-color { background: #333; color: white; }
+        
+        .menu-section {
+            background: #1a1a2e;
+            border-radius: 15px;
+            padding: 15px;
+        }
+        
+        .menu-title {
+            font-size: 18px;
+            color: #ffd700;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .skin-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .skin-option {
+            background: #2d2d44;
+            border: 2px solid #4a4a6a;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .skin-option:hover {
+            border-color: #ffd700;
+            transform: scale(1.05);
+        }
+        
+        .skin-option.selected {
+            border-color: #7fffd4;
+            box-shadow: 0 0 20px #7fffd4;
+        }
+        
+        .skin-preview {
+            width: 100%;
+            height: 40px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            display: flex;
+        }
+        
+        .skin-light {
+            flex: 1;
+            border-radius: 5px 0 0 5px;
+        }
+        
+        .skin-dark {
+            flex: 1;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4a4a6a, #2a2a4a);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.3);
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ffd700, #ffa500);
+            color: black;
+        }
+        
+        #room-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #4a4a6a;
+            background: #1a1a2e;
+            color: white;
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        
+        #chat-box {
+            flex: 1;
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .chat-message {
+            padding: 5px 10px;
+            background: #2d2d44;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        
+        .chat-sender {
+            color: #ffd700;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .chat-time {
+            color: #7fffd4;
+            font-size: 10px;
+            float: right;
+        }
+        
+        #chat-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid #4a4a6a;
+            background: #1a1a2e;
             color: white;
         }
         
-        #game {
+        #turn-indicator {
+            font-size: 20px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            background: #1a1a2e;
+            margin: 10px 0;
+        }
+        
+        .modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-        }
-        
-        #ui { 
-            position: absolute; 
-            top: 10px; 
-            left: 10px; 
-            background: rgba(0,0,0,0.8); 
-            padding: 15px; 
-            border-radius: 15px; 
-            border: 3px solid #ffaa00; 
-            z-index: 10;
-            min-width: 250px;
-            backdrop-filter: blur(5px);
-        }
-        
-        #day-night {
-            font-size: 20px;
-            color: #ffaa00;
-            margin-bottom: 10px;
-            text-shadow: 0 0 10px #ffaa00;
-        }
-        
-        .stat-row {
+            background: rgba(0,0,0,0.9);
             display: flex;
-            align-items: center;
-            margin: 5px 0;
-            gap: 10px;
-        }
-        
-        .stat-bar {
-            flex: 1;
-            height: 20px;
-            background: #333;
-            border: 2px solid #000;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .stat-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #f00, #ff0, #0f0);
-            border-radius: 8px;
-            transition: width 0.2s;
-        }
-        
-        #zombie-count {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.8);
-            padding: 10px 20px;
-            border-radius: 30px;
-            border: 3px solid #f00;
-            font-size: 24px;
-            color: #f00;
-            backdrop-filter: blur(5px);
-        }
-        
-        #inventory {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 5px;
-            background: rgba(0,0,0,0.8);
-            padding: 10px;
-            border-radius: 20px;
-            border: 3px solid #ffaa00;
-            z-index: 20;
-            backdrop-filter: blur(5px);
-        }
-        
-        .slot {
-            width: 70px;
-            height: 70px;
-            background: rgba(255,255,255,0.1);
-            border: 2px solid #ffaa00;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-            font-size: 30px;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.1s;
-        }
-        
-        .slot.selected {
-            border-color: #00ffff;
-            box-shadow: 0 0 20px #00ffff;
-            transform: scale(1.05);
-        }
-        
-        .slot-count {
-            position: absolute;
-            bottom: 2px;
-            right: 5px;
-            font-size: 14px;
-            background: #ffaa00;
-            color: black;
-            padding: 2px 5px;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-        
-        #craft-menu {
-            position: absolute;
-            bottom: 120px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            padding: 15px;
-            border-radius: 20px;
-            border: 3px solid #ffaa00;
-            width: 280px;
-            z-index: 20;
-            backdrop-filter: blur(5px);
-        }
-        
-        .craft-title {
-            color: #ffaa00;
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 20px;
-            font-weight: bold;
-        }
-        
-        .craft-item {
-            background: rgba(255,255,255,0.1);
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 10px;
-            border: 2px solid #ffaa00;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.1s;
-        }
-        
-        .craft-item:active {
-            background: rgba(255,170,0,0.3);
-            transform: scale(0.98);
-        }
-        
-        #build-menu {
-            position: absolute;
-            bottom: 120px;
-            left: 10px;
-            background: rgba(0,0,0,0.9);
-            padding: 15px;
-            border-radius: 20px;
-            border: 3px solid #00ff00;
-            width: 280px;
-            z-index: 20;
-            backdrop-filter: blur(5px);
-        }
-        
-        .build-title {
-            color: #00ff00;
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 20px;
-            font-weight: bold;
-        }
-        
-        .build-item {
-            background: rgba(255,255,255,0.1);
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 10px;
-            border: 2px solid #00ff00;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.1s;
-        }
-        
-        .build-item:active {
-            background: rgba(0,255,0,0.3);
-            transform: scale(0.98);
-        }
-        
-        #chat-container {
-            position: absolute;
-            bottom: 250px;
-            left: 10px;
-            width: 300px;
-            background: rgba(0,0,0,0.9);
-            border: 3px solid #ff44ff;
-            border-radius: 15px;
-            padding: 10px;
-            z-index: 30;
-            backdrop-filter: blur(5px);
-        }
-        
-        #chat-messages {
-            height: 150px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            padding: 5px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-        }
-        
-        .chat-message {
-            margin: 5px 0;
-            padding: 5px;
-            border-bottom: 1px solid #444;
-            word-wrap: break-word;
-        }
-        
-        #chat-input {
-            width: 100%;
-            padding: 8px;
-            border-radius: 10px;
-            border: 2px solid #ff44ff;
-            background: #222;
-            color: white;
-            font-size: 14px;
-        }
-        
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            border: 2px solid white;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 15;
-            box-shadow: 0 0 10px rgba(255,255,255,0.5);
-        }
-        
-        #controls { 
-            position: absolute; 
-            bottom: 10px; 
-            width: 100%; 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 0 15px; 
-            z-index: 20; 
-            pointer-events: none;
-        }
-        
-        #controls > div {
-            pointer-events: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .btn { 
-            width: 70px; 
-            height: 70px; 
-            background: rgba(255,68,68,0.8); 
-            border: 3px solid #ffff00; 
-            border-radius: 35px; 
-            color: white; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 30px; 
-            box-shadow: 0 5px 0 #880000; 
-            backdrop-filter: blur(5px);
-            transition: all 0.05s linear;
-        }
-        
-        .btn:active { 
-            transform: translateY(5px);
-            box-shadow: none;
-        }
-        
-        #gas-btn {
-            background: rgba(68,255,68,0.8);
-            box-shadow: 0 5px 0 #008800;
-        }
-        
-        #back-btn {
-            background: rgba(255,170,68,0.8);
-            box-shadow: 0 5px 0 #885500;
-        }
-        
-        #fire-btn {
-            background: rgba(255,0,0,0.8);
-            box-shadow: 0 5px 0 #880000;
-        }
-        
-        #chat-btn {
-            background: rgba(255,68,255,0.8);
-            box-shadow: 0 5px 0 #880088;
-        }
-        
-        #build-btn {
-            background: rgba(0,255,0,0.8);
-            box-shadow: 0 5px 0 #008800;
-        }
-        
-        #jump-btn {
-            background: rgba(68,68,255,0.8);
-            box-shadow: 0 5px 0 #000088;
-        }
-        
-        #death-screen { 
-            position: absolute; 
-            top:0; 
-            left:0; 
-            width:100%; 
-            height:100%; 
-            display: none; 
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            z-index:200; 
-            background: rgba(0,0,0,0.95); 
-            color:white; 
-            font-size: 60px; 
-            backdrop-filter: blur(10px);
-        }
-        
-        #restart-btn {
-            padding: 15px 50px;
-            background: #00ff00;
-            border: 4px solid #ffff00;
-            border-radius: 40px;
-            font-size: 30px;
-            margin-top: 30px;
-            cursor: pointer;
-            color: black;
-            font-weight: bold;
-            box-shadow: 0 10px 0 #008800;
-            transition: all 0.05s linear;
-        }
-        
-        #restart-btn:active {
-            transform: translateY(10px);
-            box-shadow: none;
-        }
-        
-        #camera-touch-area {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 5;
-        }
-        
-        #player-list {
-            position: absolute;
-            top: 10px;
-            left: 280px;
-            background: rgba(0,0,0,0.8);
-            padding: 10px;
-            border-radius: 15px;
-            border: 2px solid #ff44ff;
-            min-width: 200px;
-            backdrop-filter: blur(5px);
-        }
-        
-        .player-entry {
-            padding: 5px;
-            margin: 3px 0;
-            border-radius: 5px;
-            display: flex;
             align-items: center;
-            gap: 5px;
+            z-index: 1000;
         }
         
-        .player-color {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
+        .modal-content {
+            background: #2d2d44;
+            padding: 40px;
+            border-radius: 30px;
+            text-align: center;
+            color: white;
+            max-width: 400px;
         }
         
-        #level-indicator {
-            position: absolute;
-            top: 150px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
-            padding: 8px 15px;
-            border-radius: 20px;
-            border: 2px solid gold;
-            color: gold;
-            font-weight: bold;
+        .modal-title {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        
+        .winner-text {
+            font-size: 24px;
+            color: #ffd700;
+            margin: 20px 0;
+        }
+        
+        .rating-change {
+            font-size: 20px;
+            color: #7fffd4;
+        }
+        
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="game">
-        <div id="camera-touch-area"></div>
-        <div id="crosshair"></div>
+    <div id="main-menu">
+        <div id="game-area">
+            <div id="chessboard"></div>
+            <div id="turn-indicator">♟️ Ожидание соперника...</div>
+        </div>
         
-        <div id="ui">
-            <div id="day-night">☀️ ДЕНЬ 1 | 12:00</div>
-            <div class="stat-row">
-                <span>❤️</span>
-                <div class="stat-bar"><div id="hp-fill" class="stat-fill" style="width:100%"></div></div>
-                <span id="hp-text">100/100</span>
+        <div id="sidebar">
+            <div class="player-card" id="player-card">
+                <div class="player-name" id="player-name">Загрузка...</div>
+                <div class="player-rating" id="player-rating">⭐ 1200</div>
+                <div class="player-color" id="player-color-display">⚪ Белые</div>
             </div>
-            <div class="stat-row">
-                <span>🍗</span>
-                <div class="stat-bar"><div id="hunger-fill" class="stat-fill" style="background:#ffaa00; width:100%"></div></div>
-                <span id="hunger-text">100</span>
+            
+            <div class="menu-section">
+                <div class="menu-title">🎮 ИГРА</div>
+                <button class="btn btn-primary" id="create-room-btn">➕ СОЗДАТЬ КОМНАТУ</button>
+                <input type="text" id="room-input" placeholder="🔑 Введи ID комнаты">
+                <button class="btn" id="join-room-btn">🔗 ПРИСОЕДИНИТЬСЯ</button>
+                <button class="btn" id="ready-btn" style="display:none;">✅ ГОТОВ</button>
+                <button class="btn" id="resign-btn" style="display:none;">🏳️ СДАТЬСЯ</button>
+                <button class="btn" id="draw-btn" style="display:none;">🤝 НИЧЬЯ</button>
             </div>
-            <div class="stat-row">
-                <span>⭐</span>
-                <span id="level-text">УРОВЕНЬ 1</span>
+            
+            <div class="menu-section">
+                <div class="menu-title">🎨 СКИНЫ ДОСКИ</div>
+                <div class="skin-grid" id="skins-container"></div>
             </div>
-        </div>
-
-        <div id="zombie-count">🧟 0</div>
-        
-        <div id="level-indicator">⭐ УРОВЕНЬ 1</div>
-
-        <div id="player-list">
-            <div style="color:#ff44ff; margin-bottom:5px;">👥 ИГРОКИ ONLINE</div>
-            <div id="players-list-content"></div>
-        </div>
-
-        <div id="inventory"></div>
-
-        <div id="craft-menu">
-            <div class="craft-title">🔨 КРАФТ ОРУЖИЯ</div>
-            <div class="craft-item" onclick="craftItem('bat')">🪓 БИТА (2 дер + 1 гв)</div>
-            <div class="craft-item" onclick="craftItem('molotov')">🔥 МОЛОТОВ (1 бут + 1 бенз)</div>
-            <div class="craft-item" onclick="craftItem('medkit')">💊 АПТЕЧКА (2 бинт + 1 спирт)</div>
-            <div class="craft-item" onclick="craftItem('shotgun')">🔫 ДРОБОВИК (10 дер + 5 гв + 2 бенз)</div>
-            <div class="craft-item" onclick="craftItem('rifle')">🔥 АВТОМАТ (15 дер + 8 гв + 3 бенз)</div>
-            <div class="craft-item" onclick="craftItem('chainsaw')">⛓️ БЕНЗОПИЛА (20 дер + 10 гв + 5 бенз)</div>
-            <div class="craft-item" onclick="craftItem('grenade')">💣 ГРАНАТА (5 дер + 3 гв + 1 бенз)</div>
-        </div>
-
-        <div id="build-menu">
-            <div class="build-title">🏗️ ПОСТРОЙКИ</div>
-            <div class="build-item" onclick="buildItem('wall')">🧱 СТЕНА (5 дер)</div>
-            <div class="build-item" onclick="buildItem('trap')">⚡ ЛОВУШКА (3 дер + 2 гв)</div>
-            <div class="build-item" onclick="buildItem('farm')">🌱 ФЕРМА (10 дер + 5 гв)</div>
-            <div class="build-item" onclick="buildItem('turret')">🔫 ТУРЕЛЬ (20 дер + 10 гв + 5 бенз)</div>
-            <div class="build-item" onclick="buildItem('spikes')">🗡️ ШИПЫ (4 дер + 3 гв)</div>
-            <div class="build-item" onclick="buildItem('campfire')">🔥 КОСТЁР (3 дер + 1 бенз)</div>
-        </div>
-
-        <div id="chat-container" style="display:none;">
-            <div id="chat-messages"></div>
-            <input id="chat-input" placeholder="Введите сообщение..." maxlength="50">
-        </div>
-
-        <div id="controls">
-            <div>
-                <div class="btn" id="jump-btn" onclick="jump()">🦘</div>
-                <div class="btn" id="left-btn">←</div>
-                <div class="btn" id="right-btn">→</div>
+            
+            <div class="menu-section">
+                <div class="menu-title">💬 ЧАТ</div>
+                <div id="chat-box"></div>
+                <input type="text" id="chat-input" placeholder="Напиши сообщение...">
             </div>
-            <div>
-                <div style="display:flex; gap:5px;">
-                    <div class="btn" id="chat-btn" onclick="toggleChat()">💬</div>
-                    <div class="btn" id="build-btn" onclick="toggleBuild()">🏗️</div>
-                </div>
-                <div style="display:flex; gap:5px;">
-                    <div class="btn" id="gas-btn">↑</div>
-                    <div class="btn" id="back-btn">↓</div>
-                </div>
-                <div class="btn" id="fire-btn">⚔️</div>
+            
+            <div class="menu-section">
+                <div class="menu-title">👥 ИГРОКИ</div>
+                <div id="players-list"></div>
             </div>
         </div>
-
-        <div id="death-screen">
-            <div>💀 ТЫ УМЕР 💀</div>
-            <div style="font-size:30px; margin:20px;">УРОВЕНЬ <span id="death-level">1</span></div>
-            <div id="restart-btn" onclick="restartGame()">⟲ ЗАНОВО</div>
+    </div>
+    
+    <div id="game-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title" id="modal-title">🏆</div>
+            <div id="modal-content"></div>
+            <button class="btn btn-primary" id="modal-close-btn">ОК</button>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // ====================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ======================
         const socket = new WebSocket('wss://' + window.location.host);
         
-        let scene, camera, renderer, player;
-        let players = new Map(); // другие игроки
-        let zombies = new Map(); // зомби
-        let blocks = new Map();  // блоки построек
-        let items = new Map();   // предметы на земле
-        
         let playerId = null;
-        let playerColor = 0x44aaff;
         let playerName = 'Игрок_' + Math.floor(Math.random() * 1000);
+        let playerRating = 1200;
+        let playerColor = null;
+        let currentRoom = null;
         
-        let hp = 100;
-        let maxHp = 100;
-        let hunger = 100;
-        let level = 1;
-        let exp = 0;
+        let board = [];
+        let selectedSquare = null;
+        let possibleMoves = [];
+        let currentTurn = 'white';
+        let gameStarted = false;
+        let players = [];
+        let skins = {};
+        let currentSkin = 'classic';
         
-        let dayCount = 1;
-        let timeOfDay = 12;
-        let dayTime = true;
+        // Элементы DOM
+        const chessboard = document.getElementById('chessboard');
+        const playerNameSpan = document.getElementById('player-name');
+        const playerRatingSpan = document.getElementById('player-rating');
+        const playerColorSpan = document.getElementById('player-color-display');
+        const turnIndicator = document.getElementById('turn-indicator');
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const joinRoomBtn = document.getElementById('join-room-btn');
+        const readyBtn = document.getElementById('ready-btn');
+        const resignBtn = document.getElementById('resign-btn');
+        const drawBtn = document.getElementById('draw-btn');
+        const roomInput = document.getElementById('room-input');
+        const chatInput = document.getElementById('chat-input');
+        const chatBox = document.getElementById('chat-box');
+        const playersList = document.getElementById('players-list');
+        const skinsContainer = document.getElementById('skins-container');
+        const modal = document.getElementById('game-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
         
-        // Инвентарь (12 слотов)
-        let inventory = new Array(12).fill(null).map(() => ({ item: null, count: 0 }));
-        let selectedSlot = 0;
+        playerNameSpan.textContent = playerName;
+        playerRatingSpan.textContent = `⭐ ${playerRating}`;
         
-        // Управление
-        let keys = { forward: 0, back: 0, left: 0, right: 0, jump: 0 };
-        let speed = 0;
-        let cameraRot = 0;
-        let verticalSpeed = 0;
-        let onGround = true;
-        let playerHeight = 1.8;
-        
-        const MAP_SIZE = 400;
-        const GRAVITY = -0.02;
-        const JUMP_FORCE = 0.5;
-        
-        // Для поворота камеры пальцем
-        let isTouching = false;
-        let lastTouchX = 0;
-        
-        // Предметы
-        const itemsDB = {
-            'wood': { name: 'Дерево', emoji: '🪵', stack: 99 },
-            'nails': { name: 'Гвозди', emoji: '📌', stack: 99 },
-            'bottle': { name: 'Бутылка', emoji: '🍾', stack: 50 },
-            'gasoline': { name: 'Бензин', emoji: '⛽', stack: 50 },
-            'bandage': { name: 'Бинт', emoji: '🩹', stack: 50 },
-            'alcohol': { name: 'Спирт', emoji: '🧪', stack: 50 },
-            'can': { name: 'Консервы', emoji: '🥫', stack: 50 },
-            'bat': { name: 'Бита', emoji: '🪓', stack: 1, damage: 30, type: 'melee' },
-            'molotov': { name: 'Молотов', emoji: '🔥', stack: 5, damage: 50, type: 'throw' },
-            'medkit': { name: 'Аптечка', emoji: '💊', stack: 5, heal: 50 },
-            'shotgun': { name: 'Дробовик', emoji: '🔫', stack: 1, damage: 100, type: 'gun', ammo: 'shells' },
-            'rifle': { name: 'Автомат', emoji: '🔥', stack: 1, damage: 25, type: 'gun', ammo: 'bullets' },
-            'chainsaw': { name: 'Бензопила', emoji: '⛓️', stack: 1, damage: 40, type: 'melee', continuous: true },
-            'grenade': { name: 'Граната', emoji: '💣', stack: 3, damage: 150, type: 'explosive' },
-            'wall': { name: 'Стена', emoji: '🧱', stack: 10 },
-            'trap': { name: 'Ловушка', emoji: '⚡', stack: 10 },
-            'farm': { name: 'Ферма', emoji: '🌱', stack: 5 },
-            'turret': { name: 'Турель', emoji: '🔫', stack: 3 },
-            'spikes': { name: 'Шипы', emoji: '🗡️', stack: 10 },
-            'campfire': { name: 'Костёр', emoji: '🔥', stack: 5 }
+        // Сокет
+        socket.onopen = () => {
+            console.log('✅ Подключено к серверу');
         };
         
-        // Рецепты крафта
-        const recipes = {
-            'bat': { wood: 2, nails: 1 },
-            'molotov': { bottle: 1, gasoline: 1 },
-            'medkit': { bandage: 2, alcohol: 1 },
-            'shotgun': { wood: 10, nails: 5, gasoline: 2 },
-            'rifle': { wood: 15, nails: 8, gasoline: 3 },
-            'chainsaw': { wood: 20, nails: 10, gasoline: 5 },
-            'grenade': { wood: 5, nails: 3, gasoline: 1 },
-            'wall': { wood: 5 },
-            'trap': { wood: 3, nails: 2 },
-            'farm': { wood: 10, nails: 5 },
-            'turret': { wood: 20, nails: 10, gasoline: 5 },
-            'spikes': { wood: 4, nails: 3 },
-            'campfire': { wood: 3, gasoline: 1 }
-        };
-
-        // Типы зомби
-        const zombieTypes = {
-            normal: { color: 0x44aa44, health: 50, speed: 0.03, damage: 10, exp: 10, scale: 1 },
-            fat: { color: 0x228822, health: 120, speed: 0.015, damage: 20, exp: 25, scale: 1.3 },
-            fast: { color: 0x88ff88, health: 30, speed: 0.08, damage: 8, exp: 15, scale: 0.9 },
-            explosive: { color: 0xff5555, health: 40, speed: 0.04, damage: 15, exp: 20, scale: 1.1, explode: true },
-            boss: { color: 0xaa00aa, health: 500, speed: 0.02, damage: 30, exp: 100, scale: 1.5 }
-        };
-
-        // ====================== ИНИЦИАЛИЗАЦИЯ ======================
-        function initGame() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.FogExp2(0x87CEEB, 0.001);
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
             
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.getElementById('game').appendChild(renderer.domElement);
-            
-            // Освещение
-            const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            sunLight.position.set(50, 100, 50);
-            sunLight.castShadow = true;
-            sunLight.shadow.mapSize.width = 1024;
-            sunLight.shadow.mapSize.height = 1024;
-            sunLight.shadow.camera.near = 0.5;
-            sunLight.shadow.camera.far = 200;
-            sunLight.shadow.camera.left = -100;
-            sunLight.shadow.camera.right = 100;
-            sunLight.shadow.camera.top = 100;
-            sunLight.shadow.camera.bottom = -100;
-            scene.add(sunLight);
-            
-            const ambientLight = new THREE.AmbientLight(0x404060);
-            scene.add(ambientLight);
-            
-            // Земля
-            const groundGeo = new THREE.PlaneGeometry(800, 800);
-            const groundMat = new THREE.MeshStandardMaterial({ 
-                color: 0x2a5a2a,
-                roughness: 0.8,
-                metalness: 0.1
-            });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI/2;
-            ground.position.y = 0;
-            ground.receiveShadow = true;
-            scene.add(ground);
-            
-            // Трава (для красоты)
-            const grassGeo = new THREE.BufferGeometry();
-            const grassCount = 1000;
-            const grassPositions = [];
-            const grassColors = [];
-            
-            for (let i = 0; i < grassCount; i++) {
-                const x = (Math.random() - 0.5) * 700;
-                const z = (Math.random() - 0.5) * 700;
-                const y = 0;
-                
-                grassPositions.push(x, y, z);
-                
-                const color = new THREE.Color(0x2a5a2a).lerp(new THREE.Color(0x5a8a5a), Math.random());
-                grassColors.push(color.r, color.g, color.b);
-            }
-            
-            grassGeo.setAttribute('position', new THREE.Float32BufferAttribute(grassPositions, 3));
-            grassGeo.setAttribute('color', new THREE.Float32BufferAttribute(grassColors, 3));
-            
-            const grassMat = new THREE.PointsMaterial({ 
-                size: 0.5, 
-                vertexColors: true,
-                map: createGrassTexture()
-            });
-            
-            const grass = new THREE.Points(grassGeo, grassMat);
-            scene.add(grass);
-            
-            // Создаём игрока
-            player = createPlayer(playerColor, true);
-            player.position.set(0, 1, 10);
-            scene.add(player);
-            
-            initInventory();
-            setupSocket();
-            setupControls();
-            animate();
-        }
-
-        function createGrassTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 8;
-            canvas.height = 8;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, 8, 8);
-            ctx.fillStyle = '#00ff00';
-            ctx.fillRect(2, 0, 4, 8);
-            return new THREE.CanvasTexture(canvas);
-        }
-
-        function createPlayer(color, isMain = false) {
-            const group = new THREE.Group();
-            
-            // Тело
-            const bodyGeo = new THREE.BoxGeometry(0.8, 1.4, 0.4);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: color, emissive: isMain ? 0x222222 : 0x000000 });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.7;
-            body.castShadow = true;
-            body.receiveShadow = true;
-            group.add(body);
-            
-            // Голова
-            const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 1.5;
-            head.castShadow = true;
-            head.receiveShadow = true;
-            group.add(head);
-            
-            // Глаза
-            const eyeGeo = new THREE.BoxGeometry(0.15, 0.15, 0.1);
-            const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-            
-            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-            leftEye.position.set(-0.2, 1.65, 0.4);
-            group.add(leftEye);
-            
-            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-            rightEye.position.set(0.2, 1.65, 0.4);
-            group.add(rightEye);
-            
-            // Шапка если это главный игрок
-            if (isMain) {
-                const hatGeo = new THREE.ConeGeometry(0.5, 0.4, 8);
-                const hatMat = new THREE.MeshStandardMaterial({ color: 0xff4444 });
-                const hat = new THREE.Mesh(hatGeo, hatMat);
-                hat.position.y = 2.0;
-                hat.castShadow = true;
-                group.add(hat);
-            }
-            
-            // Имя над головой
-            if (!isMain) {
-                const canvas = document.createElement('canvas');
-                canvas.width = 128;
-                canvas.height = 64;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 20px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('???', canvas.width/2, 30);
-                
-                const texture = new THREE.CanvasTexture(canvas);
-                const nameMat = new THREE.SpriteMaterial({ map: texture });
-                const nameSprite = new THREE.Sprite(nameMat);
-                nameSprite.scale.set(2, 1, 1);
-                nameSprite.position.y = 2.5;
-                group.add(nameSprite);
-                group.userData.nameSprite = nameSprite;
-            }
-            
-            return group;
-        }
-
-        function createZombie(x, z, type, id) {
-            const group = new THREE.Group();
-            const t = zombieTypes[type] || zombieTypes.normal;
-            
-            // Тело
-            const bodyGeo = new THREE.BoxGeometry(0.8 * t.scale, 1.6 * t.scale, 0.4 * t.scale);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: t.color });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.8 * t.scale;
-            body.castShadow = true;
-            body.receiveShadow = true;
-            group.add(body);
-            
-            // Голова
-            const headGeo = new THREE.BoxGeometry(0.8 * t.scale, 0.8 * t.scale, 0.8 * t.scale);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0x88aa88 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 1.8 * t.scale;
-            head.castShadow = true;
-            head.receiveShadow = true;
-            group.add(head);
-            
-            // Глаза
-            const eyeGeo = new THREE.BoxGeometry(0.2 * t.scale, 0.2 * t.scale, 0.1 * t.scale);
-            const eyeMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 });
-            
-            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-            leftEye.position.set(-0.2 * t.scale, 1.9 * t.scale, 0.4 * t.scale);
-            group.add(leftEye);
-            
-            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-            rightEye.position.set(0.2 * t.scale, 1.9 * t.scale, 0.4 * t.scale);
-            group.add(rightEye);
-            
-            // Полоска здоровья
-            const healthBarBg = new THREE.Mesh(
-                new THREE.BoxGeometry(1, 0.1, 0.1),
-                new THREE.MeshBasicMaterial({ color: 0x333333 })
-            );
-            healthBarBg.position.y = 2.5 * t.scale;
-            group.add(healthBarBg);
-            
-            const healthBar = new THREE.Mesh(
-                new THREE.BoxGeometry(1, 0.1, 0.1),
-                new THREE.MeshBasicMaterial({ color: 0xff0000 })
-            );
-            healthBar.position.y = 2.5 * t.scale;
-            healthBar.position.x = 0.25;
-            group.add(healthBar);
-            group.userData.healthBar = healthBar;
-            
-            group.position.set(x, 0, z);
-            group.userData = {
-                id,
-                type,
-                health: t.health,
-                maxHealth: t.health,
-                speed: t.speed,
-                damage: t.damage,
-                scale: t.scale,
-                explode: t.explode || false,
-                lastAttack: 0
-            };
-            
-            return group;
-        }
-
-        function createBlock(x, y, z, type) {
-            const group = new THREE.Group();
-            
-            const colors = {
-                'wall': 0x8B4513,
-                'trap': 0x888888,
-                'farm': 0x7CFC00,
-                'turret': 0xFF4500,
-                'spikes': 0xAAAAAA,
-                'campfire': 0xFF6600
-            };
-            
-            const color = colors[type] || 0xCCCCCC;
-            
-            const block = new THREE.Mesh(
-                new THREE.BoxGeometry(1.8, 1.8, 1.8),
-                new THREE.MeshStandardMaterial({ color })
-            );
-            block.position.y = 0.9;
-            block.castShadow = true;
-            block.receiveShadow = true;
-            group.add(block);
-            
-            // Детали для разных типов
-            if (type === 'trap') {
-                const spike = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.3, 0.5, 8),
-                    new THREE.MeshStandardMaterial({ color: 0xAAAAAA })
-                );
-                spike.position.y = 1.5;
-                group.add(spike);
-            }
-            
-            if (type === 'turret') {
-                const barrel = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.2, 0.2, 1, 6),
-                    new THREE.MeshStandardMaterial({ color: 0x333333 })
-                );
-                barrel.rotation.x = Math.PI / 2;
-                barrel.position.set(0, 1.2, 0.5);
-                group.add(barrel);
-            }
-            
-            if (type === 'campfire') {
-                const fire = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.5, 0.5, 8),
-                    new THREE.MeshBasicMaterial({ color: 0xff5500 })
-                );
-                fire.position.y = 1.2;
-                group.add(fire);
-            }
-            
-            group.position.set(x, y, z);
-            group.userData = { type, hp: 100 };
-            
-            return group;
-        }
-
-        function createItem(x, z, itemType) {
-            const group = new THREE.Group();
-            
-            const colors = {
-                'wood': 0x8B4513,
-                'nails': 0xC0C0C0,
-                'can': 0xFFD700,
-                'bandage': 0xFFFFFF
-            };
-            
-            const box = new THREE.Mesh(
-                new THREE.BoxGeometry(0.5, 0.5, 0.5),
-                new THREE.MeshStandardMaterial({ color: colors[itemType] || 0xCCCCCC })
-            );
-            box.castShadow = true;
-            box.receiveShadow = true;
-            group.add(box);
-            
-            group.position.set(x, 0.25, z);
-            
-            // Анимация вращения
-            group.userData = {
-                type: 'item',
-                itemType,
-                floatOffset: Math.random() * Math.PI * 2,
-                startY: 0.25
-            };
-            
-            return group;
-        }
-
-        // ====================== ИНВЕНТАРЬ ======================
-        function initInventory() {
-            const container = document.getElementById('inventory');
-            container.innerHTML = '';
-            
-            for (let i = 0; i < 12; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'slot' + (i === selectedSlot ? ' selected' : '');
-                slot.setAttribute('data-slot', i);
-                
-                if (inventory[i].item) {
-                    const item = itemsDB[inventory[i].item];
-                    slot.innerHTML = `
-                        <span>${item.emoji}</span>
-                        <span class="slot-count">${inventory[i].count}</span>
-                    `;
-                } else {
-                    slot.innerHTML = '<span>⬜</span>';
-                }
-                
-                slot.onclick = () => selectSlot(i);
-                slot.ontouchstart = (e) => {
-                    e.preventDefault();
-                    selectSlot(i);
-                };
-                
-                container.appendChild(slot);
-            }
-        }
-
-        function selectSlot(index) {
-            selectedSlot = index;
-            initInventory();
-        }
-
-        function addToInventory(item, count = 1) {
-            // Сначала ищем такой же предмет
-            for (let i = 0; i < 12; i++) {
-                if (inventory[i].item === item && inventory[i].count < (itemsDB[item]?.stack || 1)) {
-                    inventory[i].count += count;
-                    initInventory();
-                    return true;
-                }
-            }
-            
-            // Ищем пустой слот
-            for (let i = 0; i < 12; i++) {
-                if (inventory[i].item === null) {
-                    inventory[i].item = item;
-                    inventory[i].count = count;
-                    initInventory();
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        function removeFromInventory(item, count = 1) {
-            for (let i = 0; i < 12; i++) {
-                if (inventory[i].item === item) {
-                    inventory[i].count -= count;
-                    if (inventory[i].count <= 0) {
-                        inventory[i].item = null;
-                        inventory[i].count = 0;
+            switch(data.type) {
+                case 'skins_list':
+                    skins = {};
+                    data.skins.forEach(skin => {
+                        skins[skin.id] = skin;
+                    });
+                    renderSkins();
+                    break;
+                    
+                case 'room_created':
+                    currentRoom = data.roomId;
+                    playerColor = data.color;
+                    updatePlayerColor();
+                    addChatMessage('Система', `✅ Комната создана! ID: ${data.roomId}`);
+                    readyBtn.style.display = 'block';
+                    createRoomBtn.disabled = true;
+                    joinRoomBtn.disabled = true;
+                    break;
+                    
+                case 'room_update':
+                    players = data.players;
+                    updatePlayersList();
+                    if (players.length === 2) {
+                        readyBtn.style.display = 'block';
                     }
-                    initInventory();
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        // ====================== КРАФТ И ПОСТРОЙКИ ======================
-        window.craftItem = function(recipeName) {
-            const recipe = recipes[recipeName];
-            if (!recipe) return;
-            
-            // Проверяем ресурсы
-            for (let [res, need] of Object.entries(recipe)) {
-                let total = 0;
-                for (let i = 0; i < 12; i++) {
-                    if (inventory[i].item === res) total += inventory[i].count;
-                }
-                if (total < need) return;
-            }
-            
-            // Забираем ресурсы
-            for (let [res, need] of Object.entries(recipe)) {
-                removeFromInventory(res, need);
-            }
-            
-            // Добавляем результат
-            addToInventory(recipeName, 1);
-        };
-
-        window.buildItem = function(buildingType) {
-            if (!player) return;
-            
-            const recipe = recipes[buildingType];
-            if (!recipe) return;
-            
-            // Проверяем ресурсы
-            for (let [res, need] of Object.entries(recipe)) {
-                let total = 0;
-                for (let i = 0; i < 12; i++) {
-                    if (inventory[i].item === res) total += inventory[i].count;
-                }
-                if (total < need) return;
-            }
-            
-            // Забираем ресурсы
-            for (let [res, need] of Object.entries(recipe)) {
-                removeFromInventory(res, need);
-            }
-            
-            // Ставим блок перед игроком
-            const x = player.position.x + Math.sin(player.rotation.y) * 3;
-            const z = player.position.z + Math.cos(player.rotation.y) * 3;
-            
-            socket.send(JSON.stringify({
-                type: 'place_block',
-                x: x,
-                z: z,
-                blockType: buildingType
-            }));
-        };
-
-        // ====================== ЧАТ ======================
-        window.toggleChat = function() {
-            const chat = document.getElementById('chat-container');
-            chat.style.display = chat.style.display === 'none' ? 'block' : 'none';
-            if (chat.style.display === 'block') {
-                document.getElementById('chat-input').focus();
-            }
-        };
-
-        window.toggleBuild = function() {
-            const build = document.getElementById('build-menu');
-            build.style.display = build.style.display === 'none' ? 'block' : 'none';
-        };
-
-        document.getElementById('chat-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const msg = e.target.value.trim();
-                if (msg) {
-                    socket.send(JSON.stringify({
-                        type: 'chat',
-                        message: msg
-                    }));
-                    e.target.value = '';
-                }
-            }
-        });
-
-        function addChatMessage(name, msg, color) {
-            const container = document.getElementById('chat-messages');
-            const div = document.createElement('div');
-            div.className = 'chat-message';
-            div.innerHTML = `<span style="color:#${color.toString(16).padStart(6,'0')}"><b>${name}:</b></span> ${msg}`;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // ====================== МУЛЬТИПЛЕЕР ======================
-        function setupSocket() {
-            socket.onopen = () => {
-                console.log('✅ Подключено к серверу');
-            };
-            
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                
-                switch(data.type) {
-                    case 'init':
-                        playerId = data.id;
-                        playerColor = data.color;
-                        
-                        // Загружаем существующие блоки
-                        data.blocks.forEach(block => {
-                            const b = createBlock(block.x, block.y, block.z, block.type);
-                            scene.add(b);
-                            blocks.set(block.id, b);
-                        });
-                        
-                        // Загружаем зомби
-                        data.zombies.forEach(z => {
-                            const zombie = createZombie(z.x, z.z, z.type, z.id);
-                            updateZombieHealthBar(zombie, z.health, zombieTypes[z.type].health);
-                            scene.add(zombie);
-                            zombies.set(z.id, zombie);
-                        });
-                        
-                        // Загружаем предметы
-                        data.items.forEach(item => {
-                            const it = createItem(item.x, item.z, item.itemType);
-                            it.userData.id = item.id;
-                            scene.add(it);
-                            items.set(item.id, it);
-                        });
-                        
-                        updateZombieCount();
-                        break;
-                        
-                    case 'player_join':
-                        if (data.id !== playerId && !players.has(data.id)) {
-                            const newPlayer = createPlayer(data.color, false);
-                            newPlayer.position.set(data.x, 1, data.z);
-                            newPlayer.rotation.y = data.rot;
-                            if (newPlayer.userData.nameSprite) {
-                                // Обновляем имя
-                                const canvas = document.createElement('canvas');
-                                canvas.width = 128;
-                                canvas.height = 64;
-                                const ctx = canvas.getContext('2d');
-                                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                ctx.fillStyle = 'white';
-                                ctx.font = 'bold 20px Arial';
-                                ctx.textAlign = 'center';
-                                ctx.fillText(data.name || '???', canvas.width/2, 30);
-                                newPlayer.userData.nameSprite.material.map.image = canvas;
-                                newPlayer.userData.nameSprite.material.map.needsUpdate = true;
-                            }
-                            scene.add(newPlayer);
-                            players.set(data.id, newPlayer);
-                            updatePlayersList();
+                    break;
+                    
+                case 'game_start':
+                    board = data.board;
+                    playerColor = data.yourColor;
+                    currentTurn = data.currentTurn;
+                    gameStarted = true;
+                    renderBoard();
+                    updatePlayerColor();
+                    turnIndicator.textContent = currentTurn === playerColor ? 
+                        '🎯 ТВОЙ ХОД!' : '⏳ ХОД СОПЕРНИКА';
+                    readyBtn.style.display = 'none';
+                    resignBtn.style.display = 'block';
+                    drawBtn.style.display = 'block';
+                    addChatMessage('Система', '🎮 Игра началась!');
+                    break;
+                    
+                case 'move':
+                    board = data.board;
+                    currentTurn = data.currentTurn;
+                    renderBoard();
+                    
+                    if (data.lastMove) {
+                        highlightLastMove(data.lastMove);
+                    }
+                    
+                    turnIndicator.textContent = currentTurn === playerColor ? 
+                        '🎯 ТВОЙ ХОД!' : '⏳ ХОД СОПЕРНИКА';
+                    
+                    if (data.check) {
+                        addChatMessage('Система', '⚡ ШАХ!');
+                    }
+                    break;
+                    
+                case 'game_over':
+                    gameStarted = false;
+                    resignBtn.style.display = 'none';
+                    drawBtn.style.display = 'none';
+                    createRoomBtn.disabled = false;
+                    joinRoomBtn.disabled = false;
+                    
+                    modal.classList.remove('hidden');
+                    
+                    if (data.reason === 'checkmate') {
+                        const winner = data.winner === playerColor ? 'ТЫ' : 'СОПЕРНИК';
+                        modalTitle.textContent = winner === 'ТЫ' ? '🏆 ПОБЕДА!' : '💔 ПОРАЖЕНИЕ';
+                        modalContent.innerHTML = `
+                            <div class="winner-text">${winner} ${data.winner === playerColor ? '🎉' : '😢'}</div>
+                            <div class="rating-change">Новый рейтинг: ⭐ ${data.newRating || playerRating}</div>
+                        `;
+                        if (data.newRating) {
+                            playerRating = data.newRating;
+                            playerRatingSpan.textContent = `⭐ ${playerRating}`;
                         }
-                        break;
-                        
-                    case 'player_move':
-                        if (players.has(data.id)) {
-                            const p = players.get(data.id);
-                            p.position.x = data.x;
-                            p.position.z = data.z;
-                            p.rotation.y = data.rot;
-                        }
-                        break;
-                        
-                    case 'player_left':
-                        if (players.has(data.id)) {
-                            const playerMesh = players.get(data.id);
-                            scene.remove(playerMesh);
-                            // Очищаем материалы
-                            playerMesh.traverse(obj => {
-                                if (obj.geometry) obj.geometry.dispose();
-                                if (obj.material) {
-                                    if (Array.isArray(obj.material)) {
-                                        obj.material.forEach(m => m.dispose());
-                                    } else {
-                                        obj.material.dispose();
-                                    }
-                                }
-                            });
-                            players.delete(data.id);
-                            updatePlayersList();
-                        }
-                        break;
-                        
-                    case 'player_hit':
-                        if (data.id === playerId) {
-                            hp = data.hp;
-                            updateUI();
-                            if (hp <= 0) {
-                                document.getElementById('death-screen').style.display = 'flex';
-                                document.getElementById('death-level').textContent = level;
-                            }
-                        }
-                        break;
-                        
-                    case 'player_level_up':
-                        if (data.id === playerId) {
-                            level = data.level;
-                            maxHp = data.maxHp;
-                            hp = maxHp;
-                            updateUI();
-                        }
-                        break;
-                        
-                    case 'player_death':
-                        if (data.id === playerId) {
-                            document.getElementById('death-screen').style.display = 'flex';
-                            document.getElementById('death-level').textContent = level;
-                        } else if (players.has(data.id)) {
-                            // Другой игрок умер - удаляем
-                            scene.remove(players.get(data.id));
-                            players.delete(data.id);
-                            updatePlayersList();
-                        }
-                        break;
-                        
-                    case 'zombie_spawn':
-                        const zombie = createZombie(data.x, data.z, data.type, data.id);
-                        zombie.userData.health = data.health;
-                        updateZombieHealthBar(zombie, data.health, zombieTypes[data.type].health);
-                        scene.add(zombie);
-                        zombies.set(data.id, zombie);
-                        updateZombieCount();
-                        break;
-                        
-                    case 'zombie_move':
-                        if (zombies.has(data.id)) {
-                            const z = zombies.get(data.id);
-                            z.position.x = data.x;
-                            z.position.z = data.z;
-                        }
-                        break;
-                        
-                    case 'zombie_hit':
-                        if (zombies.has(data.id)) {
-                            const z = zombies.get(data.id);
-                            z.userData.health = data.health;
-                            updateZombieHealthBar(z, data.health, zombieTypes[z.userData.type].health);
-                        }
-                        break;
-                        
-                    case 'zombie_death':
-                        if (zombies.has(data.id)) {
-                            const z = zombies.get(data.id);
-                            scene.remove(z);
-                            zombies.delete(data.id);
-                            updateZombieCount();
-                            
-                            // Эффект смерти
-                            if (data.x && data.z) {
-                                const particles = [];
-                                for (let i = 0; i < 5; i++) {
-                                    const particle = new THREE.Mesh(
-                                        new THREE.SphereGeometry(0.1),
-                                        new THREE.MeshBasicMaterial({ color: 0xff0000 })
-                                    );
-                                    particle.position.set(data.x, 0.5, data.z);
-                                    scene.add(particle);
-                                    particles.push(particle);
-                                }
-                                setTimeout(() => {
-                                    particles.forEach(p => scene.remove(p));
-                                }, 500);
-                            }
-                        }
-                        break;
-                        
-                    case 'place_block':
-                        const block = createBlock(data.x, data.y, data.z, data.blockType);
-                        block.userData.id = data.id;
-                        scene.add(block);
-                        blocks.set(data.id, block);
-                        break;
-                        
-                    case 'remove_block':
-                        if (blocks.has(data.id)) {
-                            const b = blocks.get(data.id);
-                            scene.remove(b);
-                            blocks.delete(data.id);
-                        }
-                        break;
-                        
-                    case 'item_spawn':
-                        const item = createItem(data.x, data.z, data.itemType);
-                        item.userData.id = data.id;
-                        scene.add(item);
-                        items.set(data.id, item);
-                        break;
-                        
-                    case 'item_collected':
-                        if (items.has(data.id)) {
-                            const it = items.get(data.id);
-                            scene.remove(it);
-                            items.delete(data.id);
-                        }
-                        break;
-                        
-                    case 'chat':
-                        addChatMessage(data.name, data.message, data.color);
-                        break;
-                }
-            };
-            
-            socket.onclose = () => {
-                console.log('❌ Отключено от сервера');
-            };
-        }
-
-        function updatePlayersList() {
-            const container = document.getElementById('players-list-content');
-            let html = '';
-            
-            html += `<div class="player-entry">
-                <div class="player-color" style="background:#${playerColor.toString(16).padStart(6,'0')}"></div>
-                <span>${playerName} (ты)</span>
-            </div>`;
-            
-            players.forEach((player, id) => {
-                const color = player.children[0].material.color.getHex();
-                html += `<div class="player-entry">
-                    <div class="player-color" style="background:#${color.toString(16).padStart(6,'0')}"></div>
-                    <span>Игрок</span>
-                </div>`;
-            });
-            
-            container.innerHTML = html;
-        }
-
-        function updateZombieHealthBar(zombie, health, maxHealth) {
-            if (zombie.userData.healthBar) {
-                const scale = Math.max(0, health / maxHealth);
-                zombie.userData.healthBar.scale.x = scale;
-                zombie.userData.healthBar.position.x = (scale - 1) * 0.5;
-            }
-        }
-
-        // ====================== АТАКА ======================
-        window.attack = function() {
-            if (!player) return;
-            
-            const weapon = inventory[selectedSlot].item;
-            let damage = 10; // кулаки
-            
-            if (weapon && itemsDB[weapon] && itemsDB[weapon].damage) {
-                damage = itemsDB[weapon].damage;
-                
-                if (weapon === 'medkit') {
-                    hp = Math.min(maxHp, hp + 50);
-                    removeFromInventory('medkit', 1);
-                    updateUI();
-                    return;
-                }
-            }
-            
-            // Поиск зомби в радиусе атаки
-            let hitAny = false;
-            zombies.forEach((zombie, id) => {
-                const dist = player.position.distanceTo(zombie.position);
-                if (dist < 3) {
-                    hitAny = true;
-                    socket.send(JSON.stringify({
-                        type: 'zombie_hit',
-                        id: id,
-                        damage: damage
-                    }));
-                }
-            });
-            
-            if (hitAny && weapon === 'grenade') {
-                removeFromInventory('grenade', 1);
+                    } else if (data.reason === 'resign') {
+                        modalTitle.textContent = '🏳️ СОПЕРНИК СДАЛСЯ';
+                        modalContent.innerHTML = '<div class="winner-text">ТЫ ПОБЕДИЛ! 🎉</div>';
+                    } else if (data.reason === 'draw') {
+                        modalTitle.textContent = '🤝 НИЧЬЯ';
+                        modalContent.innerHTML = '<div class="winner-text">ДОГОВОРИЛИСЬ</div>';
+                    }
+                    break;
+                    
+                case 'opponent_left':
+                    gameStarted = false;
+                    resignBtn.style.display = 'none';
+                    drawBtn.style.display = 'none';
+                    createRoomBtn.disabled = false;
+                    joinRoomBtn.disabled = false;
+                    
+                    modal.classList.remove('hidden');
+                    modalTitle.textContent = '👋 СОПЕРНИК УШЁЛ';
+                    modalContent.innerHTML = '<div class="winner-text">ТЫ ПОБЕДИЛ!</div>';
+                    break;
+                    
+                case 'error':
+                    alert(data.message);
+                    break;
+                    
+                case 'chat':
+                    addChatMessage(data.sender, data.message, data.time);
+                    break;
+                    
+                case 'skin_applied':
+                    currentSkin = data.skin;
+                    renderBoard();
+                    addChatMessage('Система', `🎨 Скин "${skins[data.skin].name}" применён`);
+                    break;
+                    
+                case 'draw_offer':
+                    if (confirm(`🤝 ${data.from} предлагает ничью. Согласен?`)) {
+                        socket.send(JSON.stringify({ type: 'accept_draw' }));
+                    }
+                    break;
             }
         };
-
-        window.jump = function() {
-            if (onGround) {
-                verticalSpeed = JUMP_FORCE;
-                onGround = false;
-            }
-        };
-
-        // ====================== ФИЗИКА И КОЛЛИЗИИ ======================
-        function checkCollisions(newX, newZ) {
-            // Границы карты
-            if (Math.abs(newX) > MAP_SIZE - 10) return true;
-            if (Math.abs(newZ) > MAP_SIZE - 10) return true;
+        
+        function renderBoard() {
+            chessboard.innerHTML = '';
+            const skin = skins[currentSkin] || skins.classic;
             
-            // Коллизии с блоками
-            for (let block of blocks.values()) {
-                const dx = Math.abs(newX - block.position.x);
-                const dz = Math.abs(newZ - block.position.z);
-                if (dx < 1.5 && dz < 1.5) {
-                    return true;
+            document.documentElement.style.setProperty('--light-color', skin.light);
+            document.documentElement.style.setProperty('--dark-color', skin.dark);
+            
+            for (let y = 0; y < 8; y++) {
+                for (let x = 0; x < 8; x++) {
+                    const square = document.createElement('div');
+                    square.className = `square ${(x + y) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.dataset.x = x;
+                    square.dataset.y = y;
+                    
+                    if (board[y] && board[y][x]) {
+                        square.textContent = board[y][x];
+                    }
+                    
+                    if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                        square.classList.add('selected');
+                    }
+                    
+                    if (possibleMoves.some(m => m.x === x && m.y === y)) {
+                        square.classList.add('possible-move');
+                    }
+                    
+                    square.onclick = () => handleSquareClick(x, y);
+                    chessboard.appendChild(square);
                 }
             }
-            
-            // Коллизии с зомби (не проходить сквозь них)
-            for (let zombie of zombies.values()) {
-                const dx = Math.abs(newX - zombie.position.x);
-                const dz = Math.abs(newZ - zombie.position.z);
-                if (dx < 1 && dz < 1) {
-                    return true;
-                }
-            }
-            
-            return false;
         }
-
-        function updateUI() {
-            document.getElementById('hp-fill').style.width = (hp / maxHp * 100) + '%';
-            document.getElementById('hp-text').textContent = `${Math.floor(hp)}/${maxHp}`;
-            document.getElementById('hunger-fill').style.width = hunger + '%';
-            document.getElementById('hunger-text').textContent = Math.floor(hunger);
-            document.getElementById('level-text').textContent = `УРОВЕНЬ ${level}`;
-            document.getElementById('level-indicator').innerHTML = `⭐ УРОВЕНЬ ${level}`;
-        }
-
-        function updateZombieCount() {
-            document.getElementById('zombie-count').innerHTML = '🧟 ' + zombies.size;
-        }
-
-        function updateDayNight() {
-            timeOfDay += 0.001;
+        
+        function handleSquareClick(x, y) {
+            if (!gameStarted || currentTurn !== playerColor) return;
             
-            if (timeOfDay >= 24) {
-                timeOfDay = 0;
-                dayCount++;
-            }
-            
-            dayTime = timeOfDay >= 6 && timeOfDay < 20;
-            
-            const hours = Math.floor(timeOfDay);
-            const minutes = Math.floor((timeOfDay % 1) * 60);
-            const timeStr = `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`;
-            
-            document.getElementById('day-night').innerHTML = 
-                (dayTime ? '☀️' : '🌙') + ` ДЕНЬ ${dayCount} | ${timeStr}`;
-            
-            if (scene) {
-                const intensity = dayTime ? 1.2 : 0.3;
-                scene.traverse(obj => {
-                    if (obj.isDirectionalLight) obj.intensity = intensity;
-                });
-                scene.background.setHex(dayTime ? 0x87CEEB : 0x111122);
-                scene.fog.color.setHex(dayTime ? 0x87CEEB : 0x111122);
-            }
-        }
-
-        function updateHunger() {
-            hunger -= 0.0005;
-            
-            if (hunger <= 0) {
-                hp -= 0.05;
-                hunger = 0;
-            }
-            
-            if (hunger < 30) {
-                // Автоматически едим консервы
-                for (let i = 0; i < 12; i++) {
-                    if (inventory[i].item === 'can') {
-                        inventory[i].count--;
-                        if (inventory[i].count <= 0) {
-                            inventory[i].item = null;
-                        }
-                        hunger = Math.min(100, hunger + 30);
-                        initInventory();
-                        break;
+            if (selectedSquare === null) {
+                // Выбираем фигуру
+                if (board[y] && board[y][x]) {
+                    const piece = board[y][x];
+                    const isMyPiece = (playerColor === 'white' && piece.charCodeAt(0) > 9812) ||
+                                     (playerColor === 'black' && piece.charCodeAt(0) < 9812);
+                    
+                    if (isMyPiece) {
+                        selectedSquare = { x, y };
+                        calculatePossibleMoves(x, y);
+                        renderBoard();
                     }
                 }
-            }
-            
-            updateUI();
-        }
-
-        // ====================== УПРАВЛЕНИЕ ======================
-        function setupControls() {
-            // Кнопки управления
-            document.getElementById('left-btn').ontouchstart = (e) => { e.preventDefault(); keys.left = 1; };
-            document.getElementById('left-btn').ontouchend = () => keys.left = 0;
-            
-            document.getElementById('right-btn').ontouchstart = (e) => { e.preventDefault(); keys.right = 1; };
-            document.getElementById('right-btn').ontouchend = () => keys.right = 0;
-            
-            document.getElementById('gas-btn').ontouchstart = (e) => { e.preventDefault(); keys.forward = 1; };
-            document.getElementById('gas-btn').ontouchend = () => keys.forward = 0;
-            
-            document.getElementById('back-btn').ontouchstart = (e) => { e.preventDefault(); keys.back = 1; };
-            document.getElementById('back-btn').ontouchend = () => keys.back = 0;
-            
-            // Поворот камеры пальцем
-            const touchArea = document.getElementById('camera-touch-area');
-            
-            touchArea.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                isTouching = true;
-                lastTouchX = e.touches[0].clientX;
-            });
-            
-            touchArea.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (!isTouching) return;
-                
-                const deltaX = (e.touches[0].clientX - lastTouchX) * 0.01;
-                player.rotation.y += deltaX;
-                
-                lastTouchX = e.touches[0].clientX;
-            });
-            
-            touchArea.addEventListener('touchend', () => {
-                isTouching = false;
-            });
-        }
-
-        // ====================== ПРЕДМЕТЫ НА ЗЕМЛЕ ======================
-        function updateItems() {
-            items.forEach((item, id) => {
-                // Анимация вращения и парения
-                item.rotation.y += 0.02;
-                item.position.y = 0.25 + Math.sin(Date.now() * 0.003 + item.userData.floatOffset) * 0.1;
-                
-                // Проверка подбора
-                if (player) {
-                    const dist = player.position.distanceTo(item.position);
-                    if (dist < 2) {
-                        socket.send(JSON.stringify({
-                            type: 'collect_item',
-                            id: id
-                        }));
-                        
-                        // Добавляем в инвентарь
-                        if (addToInventory(item.userData.itemType, 1)) {
-                            scene.remove(item);
-                            items.delete(id);
-                        }
-                    }
-                }
-            });
-        }
-
-        // ====================== АНИМАЦИЯ ======================
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            if (!player) return;
-            
-            updateDayNight();
-            updateHunger();
-            updateItems();
-            
-            // Поворот
-            if (keys.left) player.rotation.y += 0.03;
-            if (keys.right) player.rotation.y -= 0.03;
-            
-            // Движение
-            let moveSpeed = 0;
-            if (keys.forward) moveSpeed = 0.1;
-            else if (keys.back) moveSpeed = -0.05;
-            
-            // Гравитация
-            verticalSpeed += GRAVITY;
-            player.position.y += verticalSpeed;
-            
-            if (player.position.y <= 1) {
-                player.position.y = 1;
-                verticalSpeed = 0;
-                onGround = true;
-            }
-            
-            // Перемещение с проверкой коллизий
-            const newX = player.position.x + Math.sin(player.rotation.y) * moveSpeed;
-            const newZ = player.position.z + Math.cos(player.rotation.y) * moveSpeed;
-            
-            if (!checkCollisions(newX, newZ)) {
-                player.position.x = newX;
-                player.position.z = newZ;
-            }
-            
-            // Отправка позиции на сервер
-            if (socket.readyState === WebSocket.OPEN && playerId) {
+            } else {
+                // Делаем ход
                 socket.send(JSON.stringify({
                     type: 'move',
-                    x: player.position.x,
-                    z: player.position.z,
-                    rot: player.rotation.y
+                    from: selectedSquare,
+                    to: { x, y }
+                }));
+                
+                selectedSquare = null;
+                possibleMoves = [];
+                renderBoard();
+            }
+        }
+        
+        function calculatePossibleMoves(x, y) {
+            possibleMoves = [];
+            // Упрощённо - все соседние клетки
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+                        possibleMoves.push({ x: nx, y: ny });
+                    }
+                }
+            }
+        }
+        
+        function highlightLastMove(move) {
+            // Можно добавить подсветку последнего хода
+        }
+        
+        function renderSkins() {
+            skinsContainer.innerHTML = '';
+            Object.entries(skins).forEach(([id, skin]) => {
+                const option = document.createElement('div');
+                option.className = `skin-option ${id === currentSkin ? 'selected' : ''}`;
+                option.innerHTML = `
+                    <div class="skin-preview">
+                        <div class="skin-light" style="background: ${skin.light}"></div>
+                        <div class="skin-dark" style="background: ${skin.dark}"></div>
+                    </div>
+                    <div>${skin.name}</div>
+                `;
+                option.onclick = () => {
+                    socket.send(JSON.stringify({
+                        type: 'set_skin',
+                        skin: id
+                    }));
+                };
+                skinsContainer.appendChild(option);
+            });
+        }
+        
+        function updatePlayersList() {
+            playersList.innerHTML = '';
+            players.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'player-card';
+                div.style.padding = '10px';
+                div.style.margin = '5px 0';
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #ffd700;">${p.name}</span>
+                        <span style="color: #7fffd4;">⭐ ${p.rating}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                        <span class="player-color ${p.color === 'white' ? 'white-color' : 'black-color'}">
+                            ${p.color === 'white' ? '⚪' : '⚫'} ${p.color}
+                        </span>
+                        <span>${p.ready ? '✅ Готов' : '⏳ Ждём'}</span>
+                    </div>
+                `;
+                playersList.appendChild(div);
+            });
+        }
+        
+        function updatePlayerColor() {
+            if (playerColor === 'white') {
+                playerColorSpan.className = 'player-color white-color';
+                playerColorSpan.textContent = '⚪ Белые';
+            } else if (playerColor === 'black') {
+                playerColorSpan.className = 'player-color black-color';
+                playerColorSpan.textContent = '⚫ Чёрные';
+            }
+        }
+        
+        function addChatMessage(sender, message, time = null) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message';
+            msgDiv.innerHTML = `
+                <span class="chat-sender">${sender}:</span>
+                <span>${message}</span>
+                <span class="chat-time">${time || new Date().toLocaleTimeString()}</span>
+            `;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        createRoomBtn.onclick = () => {
+            socket.send(JSON.stringify({ type: 'create_room' }));
+        };
+        
+        joinRoomBtn.onclick = () => {
+            if (roomInput.value) {
+                socket.send(JSON.stringify({
+                    type: 'join_room',
+                    roomId: roomInput.value
                 }));
             }
-            
-            // Камера (вид от третьего лица)
-            const camDist = 10;
-            const camHeight = 5;
-            
-            camera.position.x = player.position.x - Math.sin(player.rotation.y) * camDist;
-            camera.position.y = player.position.y + camHeight;
-            camera.position.z = player.position.z - Math.cos(player.rotation.y) * camDist;
-            camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
-            
-            renderer.render(scene, camera);
+        };
+        
+        readyBtn.onclick = () => {
+            socket.send(JSON.stringify({ type: 'ready' }));
+            readyBtn.disabled = true;
+            readyBtn.textContent = '✅ Ожидание...';
+        };
+        
+        resignBtn.onclick = () => {
+            if (confirm('🏳️ Точно сдаёшься?')) {
+                socket.send(JSON.stringify({ type: 'resign' }));
+            }
+        };
+        
+        drawBtn.onclick = () => {
+            socket.send(JSON.stringify({ type: 'offer_draw' }));
+            addChatMessage('Система', '🤝 Ты предложил ничью');
+        };
+        
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && chatInput.value) {
+                socket.send(JSON.stringify({
+                    type: 'chat',
+                    message: chatInput.value
+                }));
+                chatInput.value = '';
+            }
+        });
+        
+        modalCloseBtn.onclick = () => {
+            modal.classList.add('hidden');
+        };
+        
+        // Начальная отрисовка пустой доски
+        for (let y = 0; y < 8; y++) {
+            board[y] = [];
+            for (let x = 0; x < 8; x++) {
+                board[y][x] = '';
+            }
         }
-
-        // ====================== ЗАПУСК ======================
-        window.onload = () => {
-            initGame();
-        };
-
-        window.restartGame = function() {
-            document.getElementById('death-screen').style.display = 'none';
-            hp = maxHp;
-            hunger = 100;
-            player.position.set(0, 1, 10);
-            updateUI();
-        };
+        renderBoard();
     </script>
 </body>
-  </html>
+    </html> 

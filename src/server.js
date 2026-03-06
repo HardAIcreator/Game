@@ -13,410 +13,398 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Игровое состояние
-const players = new Map();       // { id: { ws, name, color, x, z, rot, hp } }
-const zombies = new Map();       // { id: { x, z, type, health, targetId } }
-const blocks = new Map();        // { id: { x, y, z, type, hp } }
-const droppedItems = new Map();  // { id: { x, z, itemType, count } }
+// Игровые комнаты
+const rooms = new Map();
+const players = new Map();
 
-let nextZombieId = 0;
-let nextBlockId = 0;
-let nextItemId = 0;
-let nextPlayerColor = 0;
+// Рейтинговая система
+const ratings = new Map();
 
-// Яркие цвета для игроков (чтобы не было двух одинаковых рядом)
-const playerColors = [
-    0xff4444, // красный
-    0x44ff44, // зелёный
-    0x4444ff, // синий
-    0xffff44, // жёлтый
-    0xff44ff, // розовый
-    0x44ffff, // голубой
-    0xff8844, // оранжевый
-    0x8844ff, // фиолетовый
-    0xff4488, // розово-красный
-    0x88ff44  // салатовый
+// Начальная расстановка
+const initialBoard = [
+    ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'],
+    ['♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟'],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙'],
+    ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖']
 ];
 
-// Типы зомби
-const zombieTypes = {
-    normal: { color: 0x44aa44, health: 50, speed: 0.03, damage: 10, exp: 10 },
-    fat: { color: 0x228822, health: 120, speed: 0.015, damage: 20, exp: 25 },
-    fast: { color: 0x88ff88, health: 30, speed: 0.08, damage: 8, exp: 15 },
-    explosive: { color: 0xff5555, health: 40, speed: 0.04, damage: 15, exp: 20, explode: true },
-    boss: { color: 0xaa00aa, health: 500, speed: 0.02, damage: 30, exp: 100, scale: 1.5 }
-};
-
-// Таймер спавна зомби
-setInterval(() => {
-    if (zombies.size < 30) {
-        const types = ['normal', 'fat', 'fast', 'explosive'];
-        if (Math.random() < 0.1) types.push('boss');
-        const type = types[Math.floor(Math.random() * types.length)];
-        
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 80 + Math.random() * 100;
-        
-        // Спавним вокруг центра, но не слишком близко к игрокам
-        let x = Math.cos(angle) * dist;
-        let z = Math.sin(angle) * dist;
-        
-        // Проверяем, чтобы не заспавнить прямо на игроке
-        let tooClose = false;
-        players.forEach(p => {
-            const dx = p.x - x;
-            const dz = p.z - z;
-            if (Math.sqrt(dx*dx + dz*dz) < 10) tooClose = true;
-        });
-        
-        if (!tooClose) {
-            const zombieId = 'z' + (nextZombieId++);
-            zombies.set(zombieId, {
-                x, z,
-                type,
-                health: zombieTypes[type].health,
-                maxHealth: zombieTypes[type].health,
-                targetId: null,
-                lastAttack: 0
-            });
-            
-            broadcast({
-                type: 'zombie_spawn',
-                id: zombieId,
-                x, z,
-                type,
-                health: zombieTypes[type].health
-            });
-        }
+// Скины на доску
+const boardSkins = {
+    classic: {
+        light: '#f0d9b5',
+        dark: '#b58863',
+        name: 'Классика'
+    },
+    wood: {
+        light: '#DEB887',
+        dark: '#8B4513',
+        name: 'Дерево'
+    },
+    marble: {
+        light: '#FFFFFF',
+        dark: '#C0C0C0',
+        name: 'Мрамор'
+    },
+    gold: {
+        light: '#FFD700',
+        dark: '#DAA520',
+        name: 'Золото'
+    },
+    emerald: {
+        light: '#50C878',
+        dark: '#2E8B57',
+        name: 'Изумруд'
     }
-}, 5000);
-
-// Таймер обновления зомби (движение)
-setInterval(() => {
-    if (players.size === 0) return;
-    
-    zombies.forEach((zombie, id) => {
-        // Ищем ближайшего игрока
-        let closestDist = 1000;
-        let closestPlayer = null;
-        let closestPlayerId = null;
-        
-        players.forEach((player, pid) => {
-            const dx = player.x - zombie.x;
-            const dz = player.z - zombie.z;
-            const dist = Math.sqrt(dx*dx + dz*dz);
-            if (dist < closestDist) {
-                closestDist = dist;
-                closestPlayer = player;
-                closestPlayerId = pid;
-            }
-        });
-        
-        if (closestPlayer) {
-            const type = zombieTypes[zombie.type];
-            const speed = type.speed;
-            
-            // Движение к игроку
-            const dx = closestPlayer.x - zombie.x;
-            const dz = closestPlayer.z - zombie.z;
-            const dist = Math.sqrt(dx*dx + dz*dz);
-            
-            if (dist > 2) {
-                zombie.x += (dx / dist) * speed;
-                zombie.z += (dz / dist) * speed;
-            } else {
-                // Атака
-                const now = Date.now();
-                if (now - zombie.lastAttack > 1000) {
-                    if (closestPlayer.hp > 0) {
-                        closestPlayer.hp -= type.damage;
-                        broadcast({
-                            type: 'player_hit',
-                            id: closestPlayerId,
-                            hp: closestPlayer.hp
-                        });
-                        
-                        if (closestPlayer.hp <= 0) {
-                            broadcast({
-                                type: 'player_death',
-                                id: closestPlayerId
-                            });
-                        }
-                    }
-                    zombie.lastAttack = now;
-                }
-            }
-            
-            // Обновляем позицию зомби для всех
-            broadcast({
-                type: 'zombie_move',
-                id,
-                x: zombie.x,
-                z: zombie.z
-            });
-        }
-    });
-}, 50);
-
-// Очистка отключившихся игроков
-setInterval(() => {
-    players.forEach((player, id) => {
-        if (Date.now() - player.lastSeen > 10000) {
-            players.delete(id);
-            broadcast({ type: 'player_left', id });
-        }
-    });
-}, 5000);
+};
 
 wss.on('connection', (ws) => {
     const playerId = 'p' + Math.random().toString(36).substring(7);
-    const playerColor = playerColors[nextPlayerColor % playerColors.length];
-    nextPlayerColor++;
+    const playerName = 'Игрок_' + Math.floor(Math.random() * 1000);
     
-    console.log('Игрок подключился:', playerId, 'цвет:', playerColor.toString(16));
-    
-    // Инициализация игрока
     players.set(playerId, {
+        id: playerId,
+        name: playerName,
+        rating: ratings.get(playerId) || 1200,
         ws,
-        name: 'Игрок_' + Math.floor(Math.random() * 1000),
-        color: playerColor,
-        x: 0,
-        z: 0,
-        rot: 0,
-        hp: 100,
-        maxHp: 100,
-        level: 1,
-        exp: 0,
-        lastSeen: Date.now()
+        skin: 'classic'
     });
     
-    // Отправляем новому игроку его данные
-    ws.send(JSON.stringify({
-        type: 'init',
-        id: playerId,
-        color: playerColor,
-        blocks: Array.from(blocks.entries()).map(([id, block]) => ({ id, ...block })),
-        zombies: Array.from(zombies.entries()).map(([id, z]) => ({ id, ...z })),
-        items: Array.from(droppedItems.entries()).map(([id, item]) => ({ id, ...item }))
-    }));
+    console.log('🎮 Игрок подключился:', playerName);
     
-    // Сообщаем всем о новом игроке
-    broadcast({
-        type: 'player_join',
-        id: playerId,
-        name: players.get(playerId).name,
-        color: playerColor,
-        x: 0,
-        z: 0,
-        rot: 0,
-        hp: 100
-    }, ws);
+    // Отправляем список скинов
+    ws.send(JSON.stringify({
+        type: 'skins_list',
+        skins: Object.entries(boardSkins).map(([id, skin]) => ({
+            id,
+            name: skin.name,
+            light: skin.light,
+            dark: skin.dark
+        }))
+    }));
     
     ws.on('message', (data) => {
         try {
             const msg = JSON.parse(data);
             const player = players.get(playerId);
-            if (!player) return;
-            
-            player.lastSeen = Date.now();
             
             switch(msg.type) {
-                case 'move':
-                    player.x = msg.x;
-                    player.z = msg.z;
-                    player.rot = msg.rot;
-                    
-                    broadcast({
-                        type: 'player_move',
-                        id: playerId,
-                        x: msg.x,
-                        z: msg.z,
-                        rot: msg.rot
-                    }, ws);
-                    break;
-                    
-                case 'place_block':
-                    // Проверяем, можно ли поставить блок (не на другом блоке)
-                    let canPlace = true;
-                    const blockX = Math.floor(msg.x / 2) * 2;
-                    const blockZ = Math.floor(msg.z / 2) * 2;
-                    
-                    blocks.forEach(block => {
-                        if (Math.abs(block.x - blockX) < 1.5 && Math.abs(block.z - blockZ) < 1.5) {
-                            canPlace = false;
-                        }
+                case 'create_room':
+                    const roomId = 'room' + Math.random().toString(36).substring(7);
+                    rooms.set(roomId, {
+                        id: roomId,
+                        players: [{
+                            id: playerId,
+                            name: player.name,
+                            rating: player.rating,
+                            color: 'white',
+                            ready: false
+                        }],
+                        board: JSON.parse(JSON.stringify(initialBoard)),
+                        currentTurn: 'white',
+                        gameStarted: false,
+                        spectators: [],
+                        moves: [],
+                        startTime: null
                     });
                     
-                    if (canPlace) {
-                        const blockId = 'b' + (nextBlockId++);
-                        const blockType = msg.blockType || 'wood';
-                        
-                        blocks.set(blockId, {
-                            x: blockX,
-                            y: 0.5,
-                            z: blockZ,
-                            type: blockType,
-                            hp: 100
+                    ws.send(JSON.stringify({
+                        type: 'room_created',
+                        roomId,
+                        color: 'white'
+                    }));
+                    break;
+                    
+                case 'join_room':
+                    const room = rooms.get(msg.roomId);
+                    if (room && room.players.length < 2) {
+                        room.players.push({
+                            id: playerId,
+                            name: player.name,
+                            rating: player.rating,
+                            color: 'black',
+                            ready: false
                         });
                         
-                        broadcast({
-                            type: 'place_block',
-                            id: blockId,
-                            x: blockX,
-                            y: 0.5,
-                            z: blockZ,
-                            blockType
+                        // Уведомляем всех в комнате
+                        room.players.forEach(p => {
+                            p.ws.send(JSON.stringify({
+                                type: 'room_update',
+                                players: room.players.map(pl => ({
+                                    name: pl.name,
+                                    rating: pl.rating,
+                                    color: pl.color,
+                                    ready: pl.ready
+                                }))
+                            }));
                         });
                     }
                     break;
                     
-                case 'remove_block':
-                    if (blocks.has(msg.id)) {
-                        // Шанс выпадения ресурса
-                        const block = blocks.get(msg.id);
-                        if (Math.random() < 0.3) {
-                            const itemId = 'i' + (nextItemId++);
-                            droppedItems.set(itemId, {
-                                x: block.x,
-                                z: block.z,
-                                itemType: 'wood',
-                                count: 1
+                case 'ready':
+                    const readyRoom = findPlayerRoom(playerId);
+                    if (readyRoom) {
+                        const p = readyRoom.players.find(p => p.id === playerId);
+                        p.ready = true;
+                        
+                        // Проверяем, готовы ли оба
+                        if (readyRoom.players.length === 2 && 
+                            readyRoom.players.every(p => p.ready)) {
+                            readyRoom.gameStarted = true;
+                            readyRoom.startTime = Date.now();
+                            
+                            readyRoom.players.forEach(p => {
+                                p.ws.send(JSON.stringify({
+                                    type: 'game_start',
+                                    board: readyRoom.board,
+                                    yourColor: p.color,
+                                    currentTurn: 'white',
+                                    opponent: readyRoom.players.find(op => op.id !== p.id).name
+                                }));
                             });
-                            broadcast({
-                                type: 'item_spawn',
-                                id: itemId,
-                                x: block.x,
-                                z: block.z,
-                                itemType: 'wood'
+                        } else {
+                            readyRoom.players.forEach(p => {
+                                p.ws.send(JSON.stringify({
+                                    type: 'room_update',
+                                    players: readyRoom.players.map(pl => ({
+                                        name: pl.name,
+                                        rating: pl.rating,
+                                        color: pl.color,
+                                        ready: pl.ready
+                                    }))
+                                }));
                             });
                         }
-                        
-                        blocks.delete(msg.id);
-                        broadcast({
-                            type: 'remove_block',
-                            id: msg.id
-                        });
                     }
                     break;
                     
-                case 'zombie_hit':
-                    if (zombies.has(msg.id)) {
-                        const zombie = zombies.get(msg.id);
-                        const type = zombieTypes[zombie.type];
+                case 'move':
+                    const moveRoom = findPlayerRoom(playerId);
+                    if (moveRoom && moveRoom.gameStarted) {
+                        const player = moveRoom.players.find(p => p.id === playerId);
                         
-                        zombie.health -= msg.damage;
+                        if (player.color !== moveRoom.currentTurn) {
+                            ws.send(JSON.stringify({
+                                type: 'error',
+                                message: '⏳ Сейчас не твой ход!'
+                            }));
+                            return;
+                        }
                         
-                        if (zombie.health <= 0) {
-                            // Даём опыт игроку
-                            player.exp += type.exp;
-                            if (player.exp >= player.level * 100) {
-                                player.level++;
-                                player.exp = 0;
-                                player.maxHp += 20;
-                                player.hp = player.maxHp;
-                                broadcast({
-                                    type: 'player_level_up',
-                                    id: playerId,
-                                    level: player.level,
-                                    maxHp: player.maxHp
-                                });
-                            }
+                        // Проверяем валидность хода (упрощённо)
+                        if (isValidMove(moveRoom.board, msg.from, msg.to, player.color)) {
+                            // Делаем ход
+                            moveRoom.board[msg.to.y][msg.to.x] = moveRoom.board[msg.from.y][msg.from.x];
+                            moveRoom.board[msg.from.y][msg.from.x] = '';
                             
-                            zombies.delete(msg.id);
-                            broadcast({
-                                type: 'zombie_death',
-                                id: msg.id,
-                                x: zombie.x,
-                                z: zombie.z
+                            moveRoom.moves.push({
+                                from: msg.from,
+                                to: msg.to,
+                                player: player.color,
+                                time: Date.now() - moveRoom.startTime
                             });
                             
-                            // Шанс выпадения предмета
-                            if (Math.random() < 0.4) {
-                                const itemId = 'i' + (nextItemId++);
-                                const items = ['wood', 'nails', 'can', 'bandage'];
-                                const itemType = items[Math.floor(Math.random() * items.length)];
+                            // Проверка на мат
+                            const checkStatus = checkGameStatus(moveRoom.board, moveRoom.currentTurn === 'white' ? 'black' : 'white');
+                            
+                            if (checkStatus === 'checkmate') {
+                                const winner = player.color;
+                                const loser = winner === 'white' ? 'black' : 'white';
                                 
-                                droppedItems.set(itemId, {
-                                    x: zombie.x,
-                                    z: zombie.z,
-                                    itemType,
-                                    count: 1
+                                // Обновляем рейтинг
+                                const winnerRating = moveRoom.players.find(p => p.color === winner).rating;
+                                const loserRating = moveRoom.players.find(p => p.color === loser).rating;
+                                
+                                const newRatings = calculateRating(winnerRating, loserRating);
+                                
+                                moveRoom.players.forEach(p => {
+                                    if (p.color === winner) {
+                                        ratings.set(p.id, newRatings.winner);
+                                    } else {
+                                        ratings.set(p.id, newRatings.loser);
+                                    }
+                                    
+                                    p.ws.send(JSON.stringify({
+                                        type: 'game_over',
+                                        winner,
+                                        reason: 'checkmate',
+                                        newRating: p.color === winner ? newRatings.winner : newRatings.loser
+                                    }));
                                 });
                                 
-                                broadcast({
-                                    type: 'item_spawn',
-                                    id: itemId,
-                                    x: zombie.x,
-                                    z: zombie.z,
-                                    itemType
+                                rooms.delete(moveRoom.id);
+                            } else {
+                                // Меняем ход
+                                moveRoom.currentTurn = moveRoom.currentTurn === 'white' ? 'black' : 'white';
+                                
+                                // Отправляем всем
+                                moveRoom.players.forEach(p => {
+                                    p.ws.send(JSON.stringify({
+                                        type: 'move',
+                                        board: moveRoom.board,
+                                        currentTurn: moveRoom.currentTurn,
+                                        lastMove: {
+                                            from: msg.from,
+                                            to: msg.to
+                                        },
+                                        check: checkStatus === 'check'
+                                    }));
                                 });
                             }
                         } else {
-                            broadcast({
-                                type: 'zombie_hit',
-                                id: msg.id,
-                                health: zombie.health
-                            });
+                            ws.send(JSON.stringify({
+                                type: 'error',
+                                message: '❌ Невозможный ход!'
+                            }));
                         }
                     }
                     break;
                     
-                case 'collect_item':
-                    if (droppedItems.has(msg.id)) {
-                        const item = droppedItems.get(msg.id);
-                        droppedItems.delete(msg.id);
-                        
-                        broadcast({
-                            type: 'item_collected',
-                            id: msg.id
-                        });
-                        
-                        // Отправляем игроку инвентарь (можно реализовать позже)
-                    }
+                case 'set_skin':
+                    player.skin = msg.skin;
+                    ws.send(JSON.stringify({
+                        type: 'skin_applied',
+                        skin: msg.skin
+                    }));
                     break;
                     
                 case 'chat':
-                    broadcast({
-                        type: 'chat',
-                        name: player.name,
-                        message: msg.message,
-                        color: player.color
-                    });
+                    const chatRoom = findPlayerRoom(playerId);
+                    if (chatRoom) {
+                        chatRoom.players.forEach(p => {
+                            p.ws.send(JSON.stringify({
+                                type: 'chat',
+                                message: msg.message,
+                                sender: player.name,
+                                time: new Date().toLocaleTimeString()
+                            }));
+                        });
+                    }
+                    break;
+                    
+                case 'resign':
+                    const resignRoom = findPlayerRoom(playerId);
+                    if (resignRoom && resignRoom.gameStarted) {
+                        const resigner = resignRoom.players.find(p => p.id === playerId);
+                        const winner = resigner.color === 'white' ? 'black' : 'white';
+                        
+                        resignRoom.players.forEach(p => {
+                            p.ws.send(JSON.stringify({
+                                type: 'game_over',
+                                winner,
+                                reason: 'resign'
+                            }));
+                        });
+                        
+                        rooms.delete(resignRoom.id);
+                    }
+                    break;
+                    
+                case 'offer_draw':
+                    const drawRoom = findPlayerRoom(playerId);
+                    if (drawRoom) {
+                        const opponent = drawRoom.players.find(p => p.id !== playerId);
+                        opponent.ws.send(JSON.stringify({
+                            type: 'draw_offer',
+                            from: player.name
+                        }));
+                    }
+                    break;
+                    
+                case 'accept_draw':
+                    const acceptRoom = findPlayerRoom(playerId);
+                    if (acceptRoom) {
+                        acceptRoom.players.forEach(p => {
+                            p.ws.send(JSON.stringify({
+                                type: 'game_over',
+                                reason: 'draw'
+                            }));
+                        });
+                        rooms.delete(acceptRoom.id);
+                    }
                     break;
             }
         } catch(e) {
-            console.log('Ошибка обработки сообщения:', e);
+            console.log('Ошибка:', e);
         }
     });
     
     ws.on('close', () => {
-        console.log('Игрок отключился:', playerId);
+        console.log('❌ Игрок отключился:', playerName);
         
-        // Очищаем все данные игрока
-        if (players.has(playerId)) {
-            players.delete(playerId);
-        }
-        
-        // Уведомляем всех
-        broadcast({
-            type: 'player_left',
-            id: playerId
+        // Удаляем из комнат
+        rooms.forEach((room, roomId) => {
+            const playerIndex = room.players.findIndex(p => p.id === playerId);
+            if (playerIndex !== -1) {
+                const disconnectedPlayer = room.players[playerIndex];
+                
+                // Уведомляем второго игрока
+                room.players.forEach(p => {
+                    if (p.id !== playerId) {
+                        p.ws.send(JSON.stringify({
+                            type: 'opponent_left',
+                            name: disconnectedPlayer.name
+                        }));
+                    }
+                });
+                
+                room.players.splice(playerIndex, 1);
+                if (room.players.length === 0) {
+                    rooms.delete(roomId);
+                }
+            }
         });
+        
+        players.delete(playerId);
     });
 });
 
-function broadcast(message, excludeWs = null) {
-    wss.clients.forEach(client => {
-        if (client !== excludeWs && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(message));
+function findPlayerRoom(playerId) {
+    let result = null;
+    rooms.forEach(room => {
+        if (room.players.some(p => p.id === playerId)) {
+            result = room;
         }
     });
+    return result;
+}
+
+// Упрощённая проверка ходов (для демо)
+function isValidMove(board, from, to, color) {
+    const piece = board[from.y][from.x];
+    const target = board[to.y][to.x];
+    
+    // Нельзя есть свои фигуры
+    if (target && ((color === 'white' && target.charCodeAt(0) < 9812) ||
+                   (color === 'black' && target.charCodeAt(0) > 9812))) {
+        return false;
+    }
+    
+    return true;
+}
+
+function checkGameStatus(board, turn) {
+    // Упрощённо - всегда false для демо
+    return 'none';
+}
+
+function calculateRating(winnerRating, loserRating) {
+    const k = 32;
+    const expectedWinner = 1 / (1 + Math.pow(10, (loserRating - winnerRating) / 400));
+    
+    const newWinner = Math.round(winnerRating + k * (1 - expectedWinner));
+    const newLoser = Math.round(loserRating + k * (0 - (1 - expectedWinner)));
+    
+    return { winner: newWinner, loser: newLoser };
 }
 
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, '0.0.0.0', () => {
-    console.log('🔥 ============================');
-    console.log('🔥 IMBOVIY ZOMBIE SURVIVAL');
-    console.log('🔥 Сервер запущен на порту', PORT);
-    console.log('🔥 ============================');
+    console.log('♟️ ============================');
+    console.log('♟️ ИМБОВЫЕ ШАХМАТЫ ЗАПУЩЕНЫ');
+    console.log('♟️ Порт:', PORT);
+    console.log('♟️ ============================');
 });

@@ -1,11 +1,19 @@
 {
-  "name": "zombie-imboviy",
+  "name": "chess-imboviy",
   "version": "1.0.0",
+  "description": "♟️ ИМБОВЫЕ ШАХМАТЫ С МУЛЬТИПЛЕЕРОМ",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "ws": "^8.14.2"
-  }
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "keywords": ["chess", "multiplayer", "websocket", "game"],
+  "author": "Your Name",
+  "license": "MIT"
 }
